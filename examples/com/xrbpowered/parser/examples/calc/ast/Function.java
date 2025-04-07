@@ -65,6 +65,30 @@ public abstract class Function extends Expression {
 						return Math.toRadians(args.get(0).calc());
 					}
 				};
+			case "min":
+				checkArgs(2, args);
+				return new Function(args) {
+					@Override
+					public Double calc() {
+						return Math.min(args.get(0).calc(), args.get(1).calc());
+					}
+				};
+			case "max":
+				checkArgs(2, args);
+				return new Function(args) {
+					@Override
+					public Double calc() {
+						return Math.max(args.get(0).calc(), args.get(1).calc());
+					}
+				};
+			case "pow":
+				checkArgs(2, args);
+				return new Function(args) {
+					@Override
+					public Double calc() {
+						return Math.pow(args.get(0).calc(), args.get(1).calc());
+					}
+				};
 			default:
 				throw new RuntimeException("unknown function " + name);
 		}

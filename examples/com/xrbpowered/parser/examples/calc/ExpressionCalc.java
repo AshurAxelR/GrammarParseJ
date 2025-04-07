@@ -1,7 +1,6 @@
 package com.xrbpowered.parser.examples.calc;
 
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
@@ -24,7 +23,7 @@ public class ExpressionCalc extends TokenisedGrammarParser<Object> {
 				.rule("\\s+", null)
 				.rule("[0-9]+(\\.[0-9]+)?", (s) -> Double.parseDouble(s))
 				.rule("[A-Za-z][A-Za-z_0-9]*", (s) -> s)
-				.rule(".", (s) -> s.charAt(0))
+				.rule("[()+\\-*/]", (s) -> s.charAt(0))
 				.build());
 		
 		rule("top_expr", Assignment.class)
@@ -48,9 +47,9 @@ public class ExpressionCalc extends TokenisedGrammarParser<Object> {
 
 		rule("expr_lit", Expression.class)
 			.sel(q('(', r("expr"), ')'), (vs) -> (Expression) vs[1])
-			.sel(q(String.class, '(', r("opt_args"), ')'), (vs) -> {
+			.sel(q(String.class, '(', opt(r("args")), ')'), (vs) -> {
 				@SuppressWarnings("unchecked")
-				List<Expression> args = (List<Expression>) vs[2];
+				List<Expression> args = (List<Expression>) optValue(vs[2], 0, List.of());
 				return Function.create((String) vs[0], args);
 			})
 			.sel(q(String.class), (vs) -> {
@@ -62,22 +61,7 @@ public class ExpressionCalc extends TokenisedGrammarParser<Object> {
 			})
 			.sel(q(Double.class), (vs) -> new ConstValue((Double) vs[0]));
 
-		rule("opt_args", List.class)
-			.sel(q(), (vs) -> new LinkedList<Expression>())
-			.sel(q(r("args")), (vs) -> (List<?>) vs[0]);
-
-		rule("args", List.class)
-			.sel(q(r("expr")), (vs) -> {
-				LinkedList<Expression> args = new LinkedList<>();
-				args.addFirst((Expression) vs[0]);
-				return args;
-			})
-			.sel(q(r("expr"), ',', r("args")), (vs) -> {
-				@SuppressWarnings("unchecked")
-				LinkedList<Expression> args = (LinkedList<Expression>) vs[2];
-				args.addFirst((Expression) vs[0]);
-				return args;
-			});
+		listRule("args", r("expr"), ',', Expression.class);
 
 		linkRules("top_expr");
 		// printPatterns(System.out);

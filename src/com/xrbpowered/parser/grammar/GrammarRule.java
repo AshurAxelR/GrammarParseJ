@@ -8,7 +8,6 @@ import java.util.LinkedList;
 import java.util.Map;
 
 import com.xrbpowered.parser.ParserException;
-import com.xrbpowered.parser.grammar.GrammarParser.RuleRef;
 
 public class GrammarRule<R> {
 
@@ -54,30 +53,15 @@ public class GrammarRule<R> {
 		}
 		
 		public void linkRules(GrammarParser parser) {
-			if(p!=null && p instanceof RuleRef ref) {
-				GrammarRule<?> rule = parser.rules.get(ref.name);
-				if(rule==null)
-					throw new InvalidParameterException("no parser rule "+ref.name);
-				this.p = rule;
-			}
+			p = GrammarParser.linkPatternRule(parser, p);
 			for(Node n : next.values())
 				n.linkRules(parser);
 		}
 
 		public Object lookingAt(GrammarParser parser, Deque<Object> vs) throws ParserException {
 			if(d>0) {
-				if(parser.isEnd())
-					throw new ParserException(parser.getPos(), parser.lineIndex(), "unexpected end of file");
-				else if(p instanceof GrammarRule<?> rule) {
-					Object r = rule.lookingAt(parser);
-					vs.add(r);
-				}
-				else if(parser.lookingAt(p)) {
-					vs.add(parser.tokenValue());
-					parser.next();
-				}
-				else
-					throw new UnexpectedTokenException(parser);
+				// test pattern and append token value
+				vs.add(parser.match(p));
 			}
 
 			ParserException lastEx = null;
@@ -86,6 +70,7 @@ public class GrammarRule<R> {
 					throw new UnexpectedTokenException(parser, "expected end of file, got %s");
 			}
 			else {
+				// continue pattern
 				int vsLen = vs.size();
 				int pos = parser.getPos();
 				for(Node n : next.values()) {
@@ -93,8 +78,11 @@ public class GrammarRule<R> {
 						return n.lookingAt(parser, vs);
 					}
 					catch(ParserException ex) {
-						if(ex.getCause()!=null)
+						if(ex.getCause()!=null) {
+							// exception caused by an output generator, propagate to top
 							throw ex;
+						}
+						// didn't match, roll back
 						if(lastEx==null || ex.pos>lastEx.pos)
 							lastEx = ex;
 						parser.restorePos(pos);
@@ -104,6 +92,7 @@ public class GrammarRule<R> {
 				}
 			}
 			
+			// reached end of pattern, must generate output
 			if(gen!=null) {
 				try {
 					return gen.gen(vs.toArray(n -> new Object[n]));
