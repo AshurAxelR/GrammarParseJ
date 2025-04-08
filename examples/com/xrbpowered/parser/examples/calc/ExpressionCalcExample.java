@@ -10,7 +10,7 @@ public class ExpressionCalcExample {
 
 	public static void main(String[] args) {
 		Map<String, Double> vars = new HashMap<>();
-		ExpressionCalc grammar = new ExpressionCalc(vars);
+		ExpressionParser parser = new ExpressionParser(vars);
 		
 		try(Scanner scan = new Scanner(System.in)) {
 			for(;;) {
@@ -21,7 +21,7 @@ public class ExpressionCalcExample {
 					return;
 				}
 
-				Assignment out = grammar.parse(input);
+				Assignment out = parser.parse(input);
 				if(out != null)
 					out.exec(vars, System.out);
 			}

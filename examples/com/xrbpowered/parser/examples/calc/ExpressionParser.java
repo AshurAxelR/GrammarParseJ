@@ -14,9 +14,9 @@ import com.xrbpowered.parser.examples.calc.ast.UnaryOp;
 import com.xrbpowered.parser.grammar.TokenisedGrammarParser;
 import com.xrbpowered.parser.token.TokeniserBuilder;
 
-public class ExpressionCalc extends TokenisedGrammarParser<Object> {
+public class ExpressionParser extends TokenisedGrammarParser<Object> {
 
-	public ExpressionCalc(Map<String, Double> vars) {
+	public ExpressionParser(Map<String, Double> vars) {
 		super(new TokeniserBuilder<Object>()
 				.rule("\\s+", null)
 				.rule("[0-9]+(\\.[0-9]+)?", (s) -> Double.parseDouble(s))

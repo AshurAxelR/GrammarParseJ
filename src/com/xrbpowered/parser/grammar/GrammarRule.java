@@ -47,7 +47,7 @@ public class GrammarRule<R> {
 				n.linkRules(parser);
 		}
 
-		public Object lookingAt(GrammarParser parser, int ruleStartPos, Deque<Object> vs) throws ParserException {
+		public Object lookingAt(GrammarParser parser, boolean top, int ruleStartPos, Deque<Object> vs) throws ParserException {
 			if(d>0) {
 				// test pattern and append token value
 				vs.add(parser.match(p));
@@ -68,7 +68,7 @@ public class GrammarRule<R> {
 				int pos = parser.getPos();
 				for(Node n : next.values()) {
 					try {
-						return n.lookingAt(parser, ruleStartPos, vs);
+						return n.lookingAt(parser, false, ruleStartPos, vs);
 					}
 					catch(RuleMatchingException ex) {
 						// didn't match, roll back
@@ -103,7 +103,6 @@ public class GrammarRule<R> {
 	public final Class<?> output;
 	
 	private Node root = new Node(0, null);
-	private boolean top = false;
 	
 	public GrammarRule(String name, Class<?> output) {
 		this.name = name;
@@ -116,15 +115,18 @@ public class GrammarRule<R> {
 	}
 	
 	public void linkRules(GrammarParser parser) {
-		this.top = (this==parser.getTopRule());
 		root.linkRules(parser);
 	}
 	
-	public Object lookingAt(GrammarParser parser) throws ParserException {
+	private Object lookingAt(boolean top, GrammarParser parser) throws ParserException {
 		if(top)
 			parser.lastError = null;
 		Deque<Object> vs = new LinkedList<>();
-		return root.lookingAt(parser, parser.getPos(), vs);
+		return root.lookingAt(parser, top, parser.getPos(), vs);
 	}
-	
+
+	public Object lookingAt(GrammarParser parser) throws ParserException {
+		return lookingAt(true, parser);
+	}
+
 }
