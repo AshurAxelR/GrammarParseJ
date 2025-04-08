@@ -5,7 +5,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
-import com.xrbpowered.parser.ParserException;
+import com.xrbpowered.parser.err.OutputGeneratorException;
+import com.xrbpowered.parser.err.ParserException;
+import com.xrbpowered.parser.err.UnknownTokenException;
 import com.xrbpowered.parser.examples.calc.ast.Assignment;
 import com.xrbpowered.parser.examples.calc.ast.BinaryOp;
 import com.xrbpowered.parser.examples.calc.ast.ConstValue;
@@ -14,7 +16,6 @@ import com.xrbpowered.parser.examples.calc.ast.Function;
 import com.xrbpowered.parser.examples.calc.ast.UnaryOp;
 import com.xrbpowered.parser.grammar.TokenisedGrammarParser;
 import com.xrbpowered.parser.token.TokeniserBuilder;
-import com.xrbpowered.parser.token.UnknownTokenException;
 
 public class ExpressionCalc extends TokenisedGrammarParser<Object> {
 
@@ -23,7 +24,7 @@ public class ExpressionCalc extends TokenisedGrammarParser<Object> {
 				.rule("\\s+", null)
 				.rule("[0-9]+(\\.[0-9]+)?", (s) -> Double.parseDouble(s))
 				.rule("[A-Za-z][A-Za-z_0-9]*", (s) -> s)
-				.rule("[()+\\-*/]", (s) -> s.charAt(0))
+				.rule("[()+\\-*/=,]", (s) -> s.charAt(0))
 				.build());
 		
 		rule("top_expr", Assignment.class)
@@ -56,7 +57,7 @@ public class ExpressionCalc extends TokenisedGrammarParser<Object> {
 				String name = (String) vs[0];
 				Double val = vars.get(name);
 				if(val==null)
-					throw new RuntimeException("unknown variable " + name);
+					throw new OutputGeneratorException("unknown variable " + name);
 				return new ConstValue(val); // reading variable value as constant
 			})
 			.sel(q(Double.class), (vs) -> new ConstValue((Double) vs[0]));
@@ -78,7 +79,7 @@ public class ExpressionCalc extends TokenisedGrammarParser<Object> {
 	}
 	
 	@Override
-	protected Object tokenValue() {
+	public Object tokenValue() {
 		return token;
 	}
 	
@@ -88,8 +89,13 @@ public class ExpressionCalc extends TokenisedGrammarParser<Object> {
 			next();
 			return (Assignment) getTopRule().lookingAt(this);
 		}
-		catch(ParserException e) {
-			System.err.println(e.getMessage());
+		catch(ParserException ex) {
+			System.err.printf("(%d) %s\n", ex.pos, ex.getMessage());
+			// e.printStackTrace();
+			return null;
+		}
+		catch(Exception ex) {
+			System.err.println(ex.getMessage());
 			// e.printStackTrace();
 			return null;
 		}

@@ -1,6 +1,6 @@
 package com.xrbpowered.parser.grammar;
 
-import com.xrbpowered.parser.ParserException;
+import com.xrbpowered.parser.err.ParserException;
 import com.xrbpowered.parser.token.Tokeniser;
 
 public abstract class TokenisedGrammarParser<T> extends GrammarParser {
@@ -19,13 +19,8 @@ public abstract class TokenisedGrammarParser<T> extends GrammarParser {
 	}
 	
 	@Override
-	protected int getPos() {
+	public int getPos() {
 		return tokeniser.getTokenIndex();
-	}
-	
-	@Override
-	public int lineIndex() {
-		return tokeniser.getTokenLine();
 	}
 	
 	@Override

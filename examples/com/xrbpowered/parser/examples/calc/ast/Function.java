@@ -2,6 +2,8 @@ package com.xrbpowered.parser.examples.calc.ast;
 
 import java.util.List;
 
+import com.xrbpowered.parser.err.OutputGeneratorException;
+
 public abstract class Function extends Expression {
 
 	public final List<Expression> args;
@@ -12,7 +14,7 @@ public abstract class Function extends Expression {
 
 	private static void checkArgs(int expected, List<Expression> args) {
 		if(args.size()!=expected)
-			throw new RuntimeException("expected arguments: " + expected);
+			throw new OutputGeneratorException("expected arguments: " + expected);
 	}
 	
 	public static Function create(String name, List<Expression> args) {
@@ -90,7 +92,7 @@ public abstract class Function extends Expression {
 					}
 				};
 			default:
-				throw new RuntimeException("unknown function " + name);
+				throw new OutputGeneratorException("unknown function " + name);
 		}
 	}
 	

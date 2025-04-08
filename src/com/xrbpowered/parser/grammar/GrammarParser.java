@@ -2,15 +2,18 @@ package com.xrbpowered.parser.grammar;
 
 import java.io.PrintStream;
 import java.security.InvalidParameterException;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
-import com.xrbpowered.parser.ParserException;
-import com.xrbpowered.parser.grammar.GrammarRule.UnexpectedTokenException;
+import com.xrbpowered.parser.err.ParserException;
+import com.xrbpowered.parser.err.RuleMatchingException;
+import com.xrbpowered.parser.err.UnexpectedTokenException;
 
 public abstract class GrammarParser {
 
@@ -43,39 +46,49 @@ public abstract class GrammarParser {
 		public OptionalPattern(Object[] p) {
 			this.p = p;
 		}
+		@Override
+		public String toString() {
+			return String.format("opt(%s)", Arrays.stream(p)
+					.map(Object::toString).collect(Collectors.joining(",")));
+		}
 	}
 	
 	protected Map<String, GrammarRule<?>> rules = new LinkedHashMap<>();
 	
 	private GrammarRule<?> topRule = null;
 
-	protected abstract int getPos();
-	public abstract int lineIndex();
+	public abstract int getPos();
 	public abstract boolean isEnd();
 	
 	protected abstract void next() throws ParserException;
 	protected abstract void restorePos(int index);
 	
 	protected abstract boolean lookingAt(Object o);
-	protected abstract Object tokenValue();
+	public abstract Object tokenValue();
+	
+	protected ParserException lastError = null;
+	
+	private Object matchOptional(OptionalPattern opt) throws ParserException {
+		int pos = getPos();
+		try {
+			Object[] vs = new Object[opt.p.length];
+			for(int i=0; i<opt.p.length; i++)
+				vs[i] = match(opt.p[i]);
+			return vs;
+		}
+		catch(RuleMatchingException ex) {
+			restorePos(pos);
+			return null;
+		}
+	}
 	
 	protected Object match(Object p) throws ParserException {
 		if(isEnd())
-			throw new ParserException(getPos(), lineIndex(), "unexpected end of file");
-		else if(p instanceof GrammarRule<?> rule) {
+			throw new RuleMatchingException(this, "unexpected end of file");
+		else if(p instanceof GrammarRule<?> rule)
 			return rule.lookingAt(this);
-		}
-		else if(p instanceof OptionalPattern opt) {
-			try {
-				Object[] vs = new Object[opt.p.length];
-				for(int i=0; i<opt.p.length; i++)
-					vs[i] = match(opt.p[i]);
-				return vs;
-			}
-			catch(ParserException e) {
-				return null;
-			}
-		}
+		else if(p instanceof OptionalPattern opt)
+			return matchOptional(opt);
 		else if(lookingAt(p)) {
 			Object v = tokenValue();
 			next();

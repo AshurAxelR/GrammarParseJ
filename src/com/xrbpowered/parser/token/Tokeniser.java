@@ -9,6 +9,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.regex.Matcher;
 
+import com.xrbpowered.parser.err.UnknownTokenException;
+
 public class Tokeniser<T> {	
 	
 	protected final List<TokeniserRule<T>> rules;
@@ -16,10 +18,7 @@ public class Tokeniser<T> {
 	protected String source = null;
 	protected int end = 0;
 	protected int index = 0;
-	protected int line = 1;
-
 	protected int tokenIndex = 0;
-	protected int tokenLine = 1;
 	
 	public Tokeniser(Collection<TokeniserRule<T>> rules) {
 		this.rules = List.copyOf(rules);
@@ -34,7 +33,6 @@ public class Tokeniser<T> {
 	public void start(String source, int start, int end) {
 		this.source = source;
 		this.index = start;
-		this.line = 1; // FIXME initial line index
 		this.end = end;
 		for(TokeniserRule<T> rule : rules)
 			rule.setSource(source);
@@ -60,34 +58,12 @@ public class Tokeniser<T> {
 		return index;
 	}
 
-	private void jumpTo(int from, int to) {
-		int min = Math.min(from, to);
-		int max = Math.max(from, to);
-		int lines = 0;
-		for(int i=min; i<max; i++) {
-			if(source.charAt(i)=='\n')
-				lines++;
-		}
-		if(to<from)
-			lines = -lines;
-		this.line += lines;
-		this.index = to;
-	}
-
-	public void jumpTo(int index) {
-		jumpTo(this.index, index);
-	}
-
-	public int getLine() {
-		return line;
-	}
-	
 	public int getTokenIndex() {
 		return tokenIndex;
 	}
 	
-	public int getTokenLine() {
-		return tokenLine;
+	public void jumpTo(int index) {
+		this.index = index;
 	}
 	
 	public T getNextToken(boolean skipVoid) throws UnknownTokenException {
@@ -104,7 +80,6 @@ public class Tokeniser<T> {
 			
 			if(match!=null) {
 				tokenIndex = index;
-				tokenLine = line;
 				String raw = match.getMatcher().group();
 				T t = match.getToken(raw);
 				jumpTo(match.getMatcher().end());
@@ -112,8 +87,9 @@ public class Tokeniser<T> {
 					return t;
 			}
 			else
-				throw(new UnknownTokenException(index, line));
+				throw(new UnknownTokenException(index, source.charAt(index)));
 		}
+		tokenIndex = end;
 		return null;
 	}
 	

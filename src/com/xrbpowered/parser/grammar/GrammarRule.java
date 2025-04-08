@@ -7,22 +7,12 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Map;
 
-import com.xrbpowered.parser.ParserException;
+import com.xrbpowered.parser.err.OutputGeneratorException;
+import com.xrbpowered.parser.err.ParserException;
+import com.xrbpowered.parser.err.RuleMatchingException;
 
 public class GrammarRule<R> {
 
-	public static class UnexpectedTokenException extends ParserException {
-
-		public UnexpectedTokenException(GrammarParser parser, String fmt) {
-			super(parser.getPos(), parser.lineIndex(), String.format(fmt, parser.tokenValue()));
-		}
-
-		public UnexpectedTokenException(GrammarParser parser) {
-			this(parser, "unexpected token %s");
-		}
-
-	}
-	
 	private class Node {
 		private final int d;
 		private Object p;
@@ -58,16 +48,20 @@ public class GrammarRule<R> {
 				n.linkRules(parser);
 		}
 
-		public Object lookingAt(GrammarParser parser, Deque<Object> vs) throws ParserException {
+		public Object lookingAt(GrammarParser parser, int ruleStartPos, Deque<Object> vs) throws ParserException {
 			if(d>0) {
 				// test pattern and append token value
 				vs.add(parser.match(p));
 			}
 
-			ParserException lastEx = null;
+			RuleMatchingException lastErr = null;
 			if(next.isEmpty()) {
-				if(top && !parser.isEnd())
-					throw new UnexpectedTokenException(parser, "expected end of file, got %s");
+				if(top && !parser.isEnd()) {
+					if(parser.lastError!=null)
+						throw parser.lastError;
+					else
+						throw new RuleMatchingException(parser, "expected end of file");
+				}
 			}
 			else {
 				// continue pattern
@@ -75,16 +69,14 @@ public class GrammarRule<R> {
 				int pos = parser.getPos();
 				for(Node n : next.values()) {
 					try {
-						return n.lookingAt(parser, vs);
+						return n.lookingAt(parser, ruleStartPos, vs);
 					}
-					catch(ParserException ex) {
-						if(ex.getCause()!=null) {
-							// exception caused by an output generator, propagate to top
-							throw ex;
-						}
+					catch(RuleMatchingException ex) {
 						// didn't match, roll back
-						if(lastEx==null || ex.pos>lastEx.pos)
-							lastEx = ex;
+						if(lastErr==null || ex.pos>lastErr.pos)
+							lastErr = ex;
+						if(parser.lastError==null || ex.pos>parser.lastError.pos)
+							parser.lastError = ex;
 						parser.restorePos(pos);
 						while(vs.size()>vsLen)
 							vs.removeLast();
@@ -97,13 +89,13 @@ public class GrammarRule<R> {
 				try {
 					return gen.gen(vs.toArray(n -> new Object[n]));
 				}
-				catch (RuntimeException e) {
+				catch (OutputGeneratorException ex) {
 					// e.printStackTrace();
-					throw new ParserException(parser.getPos(), parser.lineIndex(), e);
+					throw new ParserException(ruleStartPos, ex);
 				}
 			}
-			else if(lastEx!=null)
-				throw lastEx;
+			else if(lastErr!=null)
+				throw lastErr;
 			else
 				throw new InvalidParameterException("no output generator");
 		}
@@ -143,8 +135,10 @@ public class GrammarRule<R> {
 	}
 	
 	public Object lookingAt(GrammarParser parser) throws ParserException {
+		if(top)
+			parser.lastError = null;
 		Deque<Object> vs = new LinkedList<>();
-		return root.lookingAt(parser, vs);
+		return root.lookingAt(parser, parser.getPos(), vs);
 	}
 	
 	public void printPattern(PrintStream out) {
