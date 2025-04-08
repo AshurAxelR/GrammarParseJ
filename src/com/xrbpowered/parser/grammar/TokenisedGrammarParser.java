@@ -12,12 +12,6 @@ public abstract class TokenisedGrammarParser<T> extends GrammarParser {
 		this.tokeniser = tokeniser;
 	}
 	
-	public void debugTokenPos(String msg) {
-		System.out.printf("(%s) token=%s, tokenIndex=%d, index=%d, end=%d\n",
-				msg, token==null ? "null" : token.toString(),
-				tokeniser.getTokenIndex(), tokeniser.getIndex(), tokeniser.getEnd());
-	}
-	
 	@Override
 	public int getPos() {
 		return tokeniser.getTokenIndex();
@@ -34,15 +28,10 @@ public abstract class TokenisedGrammarParser<T> extends GrammarParser {
 	}
 	
 	@Override
-	protected void restorePos(int index) {
+	protected void restorePos(int index) throws ParserException {
 		if(index!=tokeniser.getTokenIndex()) {
 			tokeniser.jumpTo(index);
-			try {
-				next();
-			}
-			catch(ParserException e) {
-				// never happens
-			}
+			next();
 		}
 	}
 

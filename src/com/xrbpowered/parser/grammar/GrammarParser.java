@@ -1,15 +1,11 @@
 package com.xrbpowered.parser.grammar;
 
-import java.io.PrintStream;
 import java.security.InvalidParameterException;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 import com.xrbpowered.parser.err.ParserException;
 import com.xrbpowered.parser.err.RuleMatchingException;
@@ -19,17 +15,16 @@ public abstract class GrammarParser {
 
 	public static class RuleRef {
 		public final String name;
+
 		public RuleRef(String name) {
 			this.name = name;
 		}
-		@Override
-		public String toString() {
-			return name;
-		}
+
 		@Override
 		public int hashCode() {
 			return Objects.hash(name);
 		}
+		
 		@Override
 		public boolean equals(Object obj) {
 			if(this==obj)
@@ -43,13 +38,9 @@ public abstract class GrammarParser {
 	
 	public static class OptionalPattern {
 		public Object[] p;
+		
 		public OptionalPattern(Object[] p) {
 			this.p = p;
-		}
-		@Override
-		public String toString() {
-			return String.format("opt(%s)", Arrays.stream(p)
-					.map(Object::toString).collect(Collectors.joining(",")));
 		}
 	}
 	
@@ -61,7 +52,7 @@ public abstract class GrammarParser {
 	public abstract boolean isEnd();
 	
 	protected abstract void next() throws ParserException;
-	protected abstract void restorePos(int index);
+	protected abstract void restorePos(int index) throws ParserException;
 	
 	protected abstract boolean lookingAt(Object o);
 	public abstract Object tokenValue();
@@ -144,33 +135,27 @@ public abstract class GrammarParser {
 		return topRule;
 	}
 	
+	public GrammarRule<?> getRule(String name) {
+		GrammarRule<?> rule = rules.get(name);
+		if(rule==null)
+			throw new InvalidParameterException("no parser rule "+name);
+		return rule;
+	}
+	
 	public void linkRules(String topRule) {
-		this.topRule = rules.get(topRule);
-		if(this.topRule==null)
-			throw new InvalidParameterException("no parser rule "+topRule);
+		this.topRule = getRule(topRule);
 		for(GrammarRule<?> rule : rules.values())
 			rule.linkRules(this);
 	}
 	
-	public void printPatterns(PrintStream out) {
-		for(Entry<String, GrammarRule<?>> e : rules.entrySet()) {
-			out.printf("%s :=", e.getKey());
-			e.getValue().printPattern(out);
-		}
-	}
-	
-	protected static Object linkPatternRule(GrammarParser parser, Object p) {
+	public Object linkPatternRule(Object p) {
 		if(p==null)
 			return null;
-		else if(p instanceof RuleRef ref) {
-			GrammarRule<?> rule = parser.rules.get(ref.name);
-			if(rule==null)
-				throw new InvalidParameterException("no parser rule "+ref.name);
-			return rule;
-		}
+		else if(p instanceof RuleRef ref)
+			return getRule(ref.name);
 		else if(p instanceof OptionalPattern opt) {
 			for(int i=0; i<opt.p.length; i++)
-				opt.p[i] = linkPatternRule(parser, opt.p[i]);
+				opt.p[i] = linkPatternRule(opt.p[i]);
 			return p;
 		}
 		else

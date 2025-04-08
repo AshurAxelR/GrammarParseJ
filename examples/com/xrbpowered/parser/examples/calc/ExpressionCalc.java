@@ -1,13 +1,10 @@
 package com.xrbpowered.parser.examples.calc;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Scanner;
 
 import com.xrbpowered.parser.err.OutputGeneratorException;
 import com.xrbpowered.parser.err.ParserException;
-import com.xrbpowered.parser.err.UnknownTokenException;
 import com.xrbpowered.parser.examples.calc.ast.Assignment;
 import com.xrbpowered.parser.examples.calc.ast.BinaryOp;
 import com.xrbpowered.parser.examples.calc.ast.ConstValue;
@@ -19,7 +16,7 @@ import com.xrbpowered.parser.token.TokeniserBuilder;
 
 public class ExpressionCalc extends TokenisedGrammarParser<Object> {
 
-	public ExpressionCalc() {
+	public ExpressionCalc(Map<String, Double> vars) {
 		super(new TokeniserBuilder<Object>()
 				.rule("\\s+", null)
 				.rule("[0-9]+(\\.[0-9]+)?", (s) -> Double.parseDouble(s))
@@ -65,7 +62,6 @@ public class ExpressionCalc extends TokenisedGrammarParser<Object> {
 		listRule("args", r("expr"), ',', Expression.class);
 
 		linkRules("top_expr");
-		// printPatterns(System.out);
 	}
 	
 	@Override
@@ -91,46 +87,7 @@ public class ExpressionCalc extends TokenisedGrammarParser<Object> {
 		}
 		catch(ParserException ex) {
 			System.err.printf("(%d) %s\n", ex.pos, ex.getMessage());
-			// e.printStackTrace();
 			return null;
-		}
-		catch(Exception ex) {
-			System.err.println(ex.getMessage());
-			// e.printStackTrace();
-			return null;
-		}
-	}
-	
-	public void printTokens(String input) {
-		System.out.println("tokens breakdown:");
-		tokeniser.start(input);
-		try {
-			Object token = tokeniser.getNextToken();
-			while(token != null) {
-				System.out.printf("  %s: %s\n", token.getClass().getSimpleName(), token.toString());
-				token = tokeniser.getNextToken();
-			}
-		}
-		catch(UnknownTokenException e) {
-			System.err.println(e.getMessage());
-		}
-	}
-
-	public static final ExpressionCalc grammar = new ExpressionCalc();
-	
-	private static final Map<String, Double> vars = new HashMap<>();
-
-	public static void main(String[] args) {
-		try(Scanner scan = new Scanner(System.in)) {
-			for(;;) {
-				String input = scan.nextLine();
-				if(input.isBlank())
-					return;
-				// grammar.printTokens(input);
-				Assignment out = grammar.parse(input);
-				if(out != null)
-					out.exec(vars, System.out);
-			}
 		}
 	}
 

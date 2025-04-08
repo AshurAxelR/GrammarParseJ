@@ -1,6 +1,5 @@
 package com.xrbpowered.parser.grammar;
 
-import java.io.PrintStream;
 import java.security.InvalidParameterException;
 import java.util.Deque;
 import java.util.LinkedHashMap;
@@ -43,7 +42,7 @@ public class GrammarRule<R> {
 		}
 		
 		public void linkRules(GrammarParser parser) {
-			p = GrammarParser.linkPatternRule(parser, p);
+			p = parser.linkPatternRule(p);
 			for(Node n : next.values())
 				n.linkRules(parser);
 		}
@@ -90,26 +89,13 @@ public class GrammarRule<R> {
 					return gen.gen(vs.toArray(n -> new Object[n]));
 				}
 				catch (OutputGeneratorException ex) {
-					// e.printStackTrace();
-					throw new ParserException(ruleStartPos, ex);
+					throw new ParserException(ruleStartPos, ex.getMessage(), ex);
 				}
 			}
 			else if(lastErr!=null)
 				throw lastErr;
 			else
 				throw new InvalidParameterException("no output generator");
-		}
-		
-		public void printPattern(PrintStream out) {
-			for(int i=0; i<d; i++)
-				out.print("-");
-			if(p != null)
-				out.printf("%s: %s", p.getClass().getSimpleName(), p.toString());
-			if(gen != null)
-				out.print(" > out");
-			out.print("\n");
-			for(Node n : next.values())
-				n.printPattern(out);
 		}
 	}
 	
@@ -139,15 +125,6 @@ public class GrammarRule<R> {
 			parser.lastError = null;
 		Deque<Object> vs = new LinkedList<>();
 		return root.lookingAt(parser, parser.getPos(), vs);
-	}
-	
-	public void printPattern(PrintStream out) {
-		root.printPattern(out);
-	}
-	
-	@Override
-	public String toString() {
-		return name;
 	}
 	
 }

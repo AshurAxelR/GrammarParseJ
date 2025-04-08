@@ -9,10 +9,6 @@ public class OutputGeneratorException extends RuntimeException {
 		super(msg);
 	}
 
-	public OutputGeneratorException(Throwable cause) {
-		super(cause);
-	}
-
 	public OutputGeneratorException(String msg, Throwable cause) {
 		super(msg, cause);
 	}
