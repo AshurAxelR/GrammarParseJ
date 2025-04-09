@@ -17,42 +17,32 @@ public class JsonParser extends TokenisedGrammarParser<JsonParser.Token> {
 		SYMBOL, STRING, LITERAL
 	}
 	
-	static class Token {
-		public final Type type;
-		public final Object value;
-		
-		public Token(Type type, Object value) {
-			this.type = type;
-			this.value = value;
-		}
-		
-		public static Token fromKeyword(String s) {
-			return new Token(Type.LITERAL, switch(s) {
-				case "true" -> true;
-				case "false" -> false;
-				case "null" -> null;
-				default -> throw new RuntimeException("unknown keyword");
-			});
-		}
+	static record Token(Type type, Object value) {}
+
+	public static Token fromKeyword(String s) {
+		return new Token(Type.LITERAL, switch(s) {
+			case "true" -> true;
+			case "false" -> false;
+			case "null" -> null;
+			default -> throw new RuntimeException("unknown keyword");
+		});
 	}
-	
-	private static class KeyValue {
-		public final String key;
-		public final Object value;
-		
-		public KeyValue(String key, Object value) {
-			this.key = key;
-			this.value = value;
-		}
-	}
+
+	private static record KeyValue(String key, Object value) {}
 	
 	public JsonParser() {
 		super(new TokeniserBuilder<JsonParser.Token>()
-				.rule("[\\s\\n]+", Pattern.MULTILINE, null)
-				.rule("-?[0-9]+\\.[0-9]+", (s) -> new Token(Type.LITERAL, Double.parseDouble(s)))
-				.rule("-?[1-9][0-9]*", (s) -> new Token(Type.LITERAL, Integer.parseInt(s)))
-				.rule("\"[^\"]*\"", (s) -> new Token(Type.STRING, s.substring(1, s.length()-1)))
-				.rule("[A-Za-z][A-Za-z_0-9]*", (s) -> Token.fromKeyword(s))
+				.rule(Pattern.compile("[\\s\\n]+", Pattern.MULTILINE), null)
+				.ruleEx("-?(?:0|[1-9][0-9]*)(\\.[0-9]+)?([eE][+\\-]?[0-9]+)?", (m) -> {
+					if(m.group(1)==null && m.group(2)==null) {
+						// if no fractional or exponent parts, parse into Long
+						return new Token(Type.LITERAL, Long.parseLong(m.group()));
+					}
+					else
+						return new Token(Type.LITERAL, Double.parseDouble(m.group()));
+				})
+				.rule("\"([^\"]*)\"", 1, (s) -> new Token(Type.STRING, StringLiterals.unescape(s)))
+				.rule("[A-Za-z][A-Za-z_0-9]*", (s) -> fromKeyword(s))
 				.rule("[\\[\\]{}:,]", (s) -> new Token(Type.SYMBOL, s.charAt(0)))
 				.build());
 		
@@ -93,31 +83,32 @@ public class JsonParser extends TokenisedGrammarParser<JsonParser.Token> {
 		return token.value;
 	}
 	
-	public Object parse(File file) {
+	private Object parseInput() {
 		try {
-			tokeniser.start(file);
 			next();
 			return getTopRule().lookingAt(this);
 		}
-		catch (ParserException|IOException ex) {
+		catch (ParserException ex) {
 			// TODO print line:col
 			System.err.println(ex.getMessage());
 			return null;
 		}
 	}
-	
-	public void printTokens(File file) {
+
+	public Object parse(File file) {
 		try {
 			tokeniser.start(file);
-			next();
-			while(!isEnd()) {
-				System.out.printf("%s:%s\n", token.type.name(), token.value);
-				next();
-			}
+			return parseInput();
 		}
-		catch (ParserException|IOException ex) {
+		catch(IOException ex) {
 			System.err.println(ex.getMessage());
+			return null;
 		}
+	}
+
+	public Object parse(String s) {
+		tokeniser.start(s);
+		return parseInput();
 	}
 
 }

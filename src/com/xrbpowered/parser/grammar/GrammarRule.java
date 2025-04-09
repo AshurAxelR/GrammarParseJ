@@ -48,6 +48,7 @@ public class GrammarRule<R> {
 		}
 
 		public Object lookingAt(GrammarParser parser, boolean top, int ruleStartPos, Deque<Object> vs) throws ParserException {
+			// FIXME stack overflow for long patterns
 			if(d>0) {
 				// test pattern and append token value
 				vs.add(parser.match(p));

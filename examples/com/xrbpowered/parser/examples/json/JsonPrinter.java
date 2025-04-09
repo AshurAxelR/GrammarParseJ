@@ -1,5 +1,8 @@
 package com.xrbpowered.parser.examples.json;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.util.List;
 import java.util.Map;
@@ -47,9 +50,8 @@ public class JsonPrinter {
 							out.print(" ");
 						print(out, nextIndent, e.getValue());
 					}
-					else {
-						// TODO throw exception
-					}
+					else 
+						throw new UnsupportedOperationException("requires String keys");
 				}
 				newline(out, indent);
 			}
@@ -74,15 +76,38 @@ public class JsonPrinter {
 			out.print("]");
 		}
 		else if(o instanceof String s)
-			out.printf("\"%s\"", s);
-		else {
-			// TODO check valid types, else throw exception
+			out.printf("\"%s\"", StringLiterals.escape(s));
+		else if(o instanceof Boolean
+				|| o instanceof Byte || o instanceof Short || o instanceof Integer || o instanceof Long
+				|| o instanceof Float || o instanceof Double) {
 			out.print(o.toString());
 		}
+		else
+			throw new UnsupportedOperationException("unsuported type "+o.getClass().getTypeName());
 	}
 
 	public void print(PrintStream out, Object o) {
 		print(out, "", o);
+	}
+	
+	public void printFile(File file, Object o) {
+	    try (PrintStream out = new PrintStream(file)) {
+	        print(out, o);
+	    }
+		catch(IOException ex) {
+			System.err.println(ex.getMessage());
+		}
+	}
+
+	public String printString(Object o) {
+	    try (ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+	    		PrintStream out = new PrintStream(bytes)) {
+	        print(out, o);
+	        return bytes.toString();
+	    }
+		catch(IOException ex) {
+			return null; // never happens
+		}
 	}
 
 }

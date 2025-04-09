@@ -5,11 +5,11 @@ import java.util.regex.Pattern;
 
 public class TokeniserRule<T> {
 	public final Pattern pattern;
-	public final TokenProvider<T> tokenProvider;
+	public final TokenProviderEx<T> tokenProvider;
 	
 	private Matcher matcher;
 	
-	public TokeniserRule(Pattern pattern, TokenProvider<T> tokenProvider) {
+	public TokeniserRule(Pattern pattern, TokenProviderEx<T> tokenProvider) {
 		this.pattern = pattern;
 		this.tokenProvider = tokenProvider;
 	}
@@ -29,10 +29,10 @@ public class TokeniserRule<T> {
 		matcher = null;
 	}
 	
-	public T getToken(String raw) {
+	public T getToken() {
 		if(tokenProvider==null)
 			return null;
 		else
-			return tokenProvider.getToken(raw);
+			return tokenProvider.getToken(matcher);
 	}
 }

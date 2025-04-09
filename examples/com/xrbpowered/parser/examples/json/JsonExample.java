@@ -9,7 +9,7 @@ public class JsonExample {
 	public static void main(String[] args) {
 		Object obj = new JsonParser().parse(new File(EXAMPLE_PATH));
 		if(obj!=null)
-			new JsonPrinter().print(System.out, obj);
+			new JsonPrinter(true, "    ").print(System.out, obj);
 	}
 
 }

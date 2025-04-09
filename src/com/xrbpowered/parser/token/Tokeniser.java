@@ -9,6 +9,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.regex.Matcher;
 
+import com.xrbpowered.parser.err.TokenProviderException;
+import com.xrbpowered.parser.err.TokeniserException;
 import com.xrbpowered.parser.err.UnknownTokenException;
 
 public class Tokeniser<T> {	
@@ -66,7 +68,7 @@ public class Tokeniser<T> {
 		this.index = index;
 	}
 	
-	public T getNextToken(boolean skipVoid) throws UnknownTokenException {
+	public T getNextToken(boolean skipVoid) throws TokeniserException {
 		while(index<end) {
 			TokeniserRule<T> match = null;
 			for(TokeniserRule<T> rule : rules) {
@@ -80,11 +82,18 @@ public class Tokeniser<T> {
 			
 			if(match!=null) {
 				tokenIndex = index;
-				String raw = match.getMatcher().group();
-				T t = match.getToken(raw);
-				jumpTo(match.getMatcher().end());
-				if(t!=null || !skipVoid)
-					return t;
+				try {
+					T t = match.getToken();
+					jumpTo(match.getMatcher().end());
+					if(t!=null || !skipVoid)
+						return t;
+				}
+				catch(NumberFormatException ex) {
+					throw(new TokeniserException(index, "bad number format", ex));
+				}
+				catch(TokenProviderException ex) {
+					throw(new TokeniserException(index, ex.getMessage(), ex));
+				}
 			}
 			else
 				throw(new UnknownTokenException(index, source.charAt(index)));
@@ -93,8 +102,19 @@ public class Tokeniser<T> {
 		return null;
 	}
 	
-	public T getNextToken() throws UnknownTokenException {
+	public T getNextToken() throws TokeniserException {
 		return getNextToken(true);
 	}
 
+	public static String convertString(String s, Tokeniser<String> t) throws TokeniserException {
+		t.start(s);
+		StringBuilder out = new StringBuilder();
+		for(;;) {
+			String c = t.getNextToken();
+			if(c==null)
+				return out.toString();
+			else
+				out.append(c);
+		}
+	}
 }
