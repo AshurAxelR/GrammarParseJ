@@ -2,8 +2,6 @@ package com.xrbpowered.parser.grammar;
 
 import java.security.InvalidParameterException;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -44,9 +42,9 @@ public abstract class GrammarParser {
 		}
 	}
 	
-	protected Map<String, GrammarRule<?>> rules = new LinkedHashMap<>();
+	protected Map<String, ParserRule> rules = new LinkedHashMap<>();
 	
-	private GrammarRule<?> topRule = null;
+	protected ParserRule topRule = null;
 
 	public abstract int getPos();
 	public abstract boolean isEnd();
@@ -76,8 +74,8 @@ public abstract class GrammarParser {
 	protected Object match(Object p) throws ParserException {
 		if(isEnd())
 			throw new RuleMatchingException(this, "unexpected end of file");
-		else if(p instanceof GrammarRule<?> rule)
-			return rule.lookingAt(this);
+		else if(p instanceof ParserRule rule)
+			return rule.lookingAt(false, this);
 		else if(p instanceof OptionalPattern opt)
 			return matchOptional(opt);
 		else if(lookingAt(p)) {
@@ -89,54 +87,28 @@ public abstract class GrammarParser {
 			throw new UnexpectedTokenException(this);
 	}
 	
-	private void addRule(GrammarRule<?> r) {
+	protected void addRule(ParserRule r) {
 		if(rules.containsKey(r.name))
 			throw new InvalidParameterException(String.format("rule %s already exists", r.name));
 		rules.put(r.name, r);
 	}
 	
-	protected <R> GrammarRule<R> rule(String name, Class<R> output) {
-		GrammarRule<R> r = new GrammarRule<>(name, output);
+	protected <V> GrammarRule<V> rule(String name, Class<V> output) {
+		GrammarRule<V> r = new GrammarRule<>(name);
 		addRule(r);
 		return r;
 	}
 	
-	@SuppressWarnings("unchecked")
-	protected <R> void listRule(String name, Object item, Object sep, Class<R> itemClass) {
-		GrammarRule<List<R>> r = new GrammarRule<>(name, itemClass);
-		addRule(r);
-		
-		r.sel(q(item), (vs) -> {
-			LinkedList<R> list = new LinkedList<>();
-			R v = (R) vs[0];
-			list.addFirst(v);
-			return list;
-		});
-		
-		if(sep==null) {
-			r.sel(q(item, r(name)), (vs) -> {
-				LinkedList<R> list = (LinkedList<R>) vs[1];
-				R v = (R) vs[0];
-				list.addFirst(v);
-				return list;
-			});
-		}
-		else {
-			r.sel(q(item, sep, r(name)), (vs) -> {
-				LinkedList<R> list = (LinkedList<R>) vs[2];
-				R v = (R) vs[0];
-				list.addFirst(v);
-				return list;
-			});
-		}
+	protected <V> void listRule(String name, Object item, Object sep, Class<V> itemClass) {
+		addRule(new ListRule<V>(name, false, item, sep));
 	}
-	
-	public GrammarRule<?> getTopRule() {
-		return topRule;
+
+	protected <V> void optListRule(String name, Object item, Object sep, Class<V> itemClass) {
+		addRule(new ListRule<V>(name, true, item, sep));
 	}
-	
-	public GrammarRule<?> getRule(String name) {
-		GrammarRule<?> rule = rules.get(name);
+
+	public ParserRule getRule(String name) {
+		ParserRule rule = rules.get(name);
 		if(rule==null)
 			throw new InvalidParameterException("no parser rule "+name);
 		return rule;
@@ -144,7 +116,7 @@ public abstract class GrammarParser {
 	
 	public void linkRules(String topRule) {
 		this.topRule = getRule(topRule);
-		for(GrammarRule<?> rule : rules.values())
+		for(ParserRule rule : rules.values())
 			rule.linkRules(this);
 	}
 	
@@ -160,6 +132,12 @@ public abstract class GrammarParser {
 		}
 		else
 			return p;
+	}
+	
+	protected Object parseInput() throws ParserException {
+		next();
+		lastError = null;
+		return topRule.lookingAt(true, this);
 	}
 
 	public static Object optValue(Object optv, int index, Object def) {

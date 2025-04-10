@@ -29,13 +29,13 @@ public class ExpressionParser extends TokenisedGrammarParser<Object> {
 			.sel(q(r("expr")), (vs) -> new Assignment(null, (Expression) vs[0]));
 		
 		rule("expr", Expression.class)
-			.sel(q(r("expr_prod"), '+', r("expr_prod")), (vs) -> BinaryOp.add((Expression) vs[0], (Expression) vs[2]))
-			.sel(q(r("expr_prod"), '-', r("expr_prod")), (vs) -> BinaryOp.sub((Expression) vs[0], (Expression) vs[2]))
+			.sel(q(r("expr_prod"), '+', r("expr")), (vs) -> BinaryOp.add((Expression) vs[0], (Expression) vs[2]))
+			.sel(q(r("expr_prod"), '-', r("expr")), (vs) -> BinaryOp.sub((Expression) vs[0], (Expression) vs[2]))
 			.sel(q(r("expr_prod")), (vs) -> (Expression) vs[0]);
 		
 		rule("expr_prod", Expression.class)
-			.sel(q(r("expr_sign"), '*', r("expr_sign")), (vs) -> BinaryOp.mul((Expression) vs[0], (Expression) vs[2]))
-			.sel(q(r("expr_sign"), '/', r("expr_sign")), (vs) -> BinaryOp.div((Expression) vs[0], (Expression) vs[2]))
+			.sel(q(r("expr_sign"), '*', r("expr_prod")), (vs) -> BinaryOp.mul((Expression) vs[0], (Expression) vs[2]))
+			.sel(q(r("expr_sign"), '/', r("expr_prod")), (vs) -> BinaryOp.div((Expression) vs[0], (Expression) vs[2]))
 			.sel(q(r("expr_sign")), (vs) -> (Expression) vs[0]);
 		
 		rule("expr_sign", Expression.class)
@@ -45,9 +45,9 @@ public class ExpressionParser extends TokenisedGrammarParser<Object> {
 
 		rule("expr_lit", Expression.class)
 			.sel(q('(', r("expr"), ')'), (vs) -> (Expression) vs[1])
-			.sel(q(String.class, '(', opt(r("args")), ')'), (vs) -> {
+			.sel(q(String.class, '(', r("opt_args"), ')'), (vs) -> {
 				@SuppressWarnings("unchecked")
-				List<Expression> args = (List<Expression>) optValue(vs[2], 0, List.of());
+				List<Expression> args = (List<Expression>) vs[2];
 				return Function.create((String) vs[0], args);
 			})
 			.sel(q(String.class), (vs) -> {
@@ -59,7 +59,7 @@ public class ExpressionParser extends TokenisedGrammarParser<Object> {
 			})
 			.sel(q(Double.class), (vs) -> new ConstValue((Double) vs[0]));
 
-		listRule("args", r("expr"), ',', Expression.class);
+		optListRule("opt_args", r("expr"), ',', Expression.class);
 
 		linkRules("top_expr");
 	}
@@ -82,8 +82,7 @@ public class ExpressionParser extends TokenisedGrammarParser<Object> {
 	public Assignment parse(String input) {
 		try {
 			tokeniser.start(input);
-			next();
-			return (Assignment) getTopRule().lookingAt(this);
+			return (Assignment) parseInput();
 		}
 		catch(ParserException ex) {
 			System.err.printf("(%d) %s\n", ex.pos, ex.getMessage());

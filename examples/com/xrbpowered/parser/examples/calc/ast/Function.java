@@ -27,6 +27,14 @@ public abstract class Function extends Expression {
 						return Math.PI;
 					}
 				};
+			case "abs":
+				checkArgs(1, args);
+				return new Function(args) {
+					@Override
+					public Double calc() {
+						return Math.abs(args.get(0).calc());
+					}
+				};
 			case "sqrt":
 				checkArgs(1, args);
 				return new Function(args) {

@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 import com.xrbpowered.parser.err.ParserException;
+import com.xrbpowered.parser.err.TokenProviderException;
 import com.xrbpowered.parser.grammar.TokenisedGrammarParser;
 import com.xrbpowered.parser.token.TokeniserBuilder;
 
@@ -24,7 +25,7 @@ public class JsonParser extends TokenisedGrammarParser<JsonParser.Token> {
 			case "true" -> true;
 			case "false" -> false;
 			case "null" -> null;
-			default -> throw new RuntimeException("unknown keyword");
+			default -> throw new TokenProviderException("unknown keyword");
 		});
 	}
 
@@ -47,20 +48,20 @@ public class JsonParser extends TokenisedGrammarParser<JsonParser.Token> {
 				.build());
 		
 		rule("value", Object.class)
-			.sel(q('{', opt(r("key_values")), '}'), (vs) -> {
+			.sel(q('{', r("opt_key_values"), '}'), (vs) -> {
 				Map<String, Object> map = new LinkedHashMap<>();
 				@SuppressWarnings("unchecked")
-				List<KeyValue> kvs = (List<KeyValue>) optValue(vs[1], 0, List.of());
+				List<KeyValue> kvs = (List<KeyValue>) vs[1];
 				for(KeyValue kv : kvs)
 					map.put(kv.key, kv.value);
 				return map;
 			})
-			.sel(q('[', opt(r("array_items")), ']'), (vs) -> optValue(vs[1], 0, List.of()))
+			.sel(q('[', r("opt_array_items"), ']'), (vs) -> vs[1])
 			.sel(q(Type.STRING), (vs) -> vs[0])
 			.sel(q(Type.LITERAL), (vs) -> vs[0]);
 		
-		listRule("array_items", r("value"), ',', Object.class);
-		listRule("key_values", r("key_value"), ',', KeyValue.class);
+		optListRule("opt_array_items", r("value"), ',', Object.class);
+		optListRule("opt_key_values", r("key_value"), ',', KeyValue.class);
 		
 		rule("key_value", KeyValue.class)
 			.sel(q(Type.STRING, ':', r("value")), (vs) -> new KeyValue((String) vs[0], vs[2]));
@@ -83,10 +84,9 @@ public class JsonParser extends TokenisedGrammarParser<JsonParser.Token> {
 		return token.value;
 	}
 	
-	private Object parseInput() {
+	protected Object parseInput() {
 		try {
-			next();
-			return getTopRule().lookingAt(this);
+			return super.parseInput();
 		}
 		catch (ParserException ex) {
 			// TODO print line:col

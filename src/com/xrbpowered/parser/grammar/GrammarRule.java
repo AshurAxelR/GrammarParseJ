@@ -10,7 +10,7 @@ import com.xrbpowered.parser.err.OutputGeneratorException;
 import com.xrbpowered.parser.err.ParserException;
 import com.xrbpowered.parser.err.RuleMatchingException;
 
-public class GrammarRule<R> {
+public class GrammarRule<V> extends ParserRule {
 
 	private class Node {
 		private final int d;
@@ -48,7 +48,6 @@ public class GrammarRule<R> {
 		}
 
 		public Object lookingAt(GrammarParser parser, boolean top, int ruleStartPos, Deque<Object> vs) throws ParserException {
-			// FIXME stack overflow for long patterns
 			if(d>0) {
 				// test pattern and append token value
 				vs.add(parser.match(p));
@@ -60,7 +59,7 @@ public class GrammarRule<R> {
 					if(parser.lastError!=null)
 						throw parser.lastError;
 					else
-						throw new RuleMatchingException(parser, "expected end of file");
+						throw new ParserException(parser.getPos(), "expected end of file");
 				}
 			}
 			else {
@@ -69,7 +68,7 @@ public class GrammarRule<R> {
 				int pos = parser.getPos();
 				for(Node n : next.values()) {
 					try {
-						return n.lookingAt(parser, false, ruleStartPos, vs);
+						return n.lookingAt(parser, top, ruleStartPos, vs);
 					}
 					catch(RuleMatchingException ex) {
 						// didn't match, roll back
@@ -100,34 +99,25 @@ public class GrammarRule<R> {
 		}
 	}
 	
-	public final String name;
-	public final Class<?> output;
+	protected Node root = new Node(0, null);
 	
-	private Node root = new Node(0, null);
-	
-	public GrammarRule(String name, Class<?> output) {
-		this.name = name;
-		this.output = output;
+	public GrammarRule(String name) {
+		super(name);
 	}
 	
-	public GrammarRule<R> sel(Object[] pattern, OutputGenerator<R> gen) {
+	public GrammarRule<V> sel(Object[] pattern, OutputGenerator<V> gen) {
 		root.add(pattern, gen);
 		return this;
 	}
 	
+	@Override
 	public void linkRules(GrammarParser parser) {
 		root.linkRules(parser);
 	}
 	
-	private Object lookingAt(boolean top, GrammarParser parser) throws ParserException {
-		if(top)
-			parser.lastError = null;
-		Deque<Object> vs = new LinkedList<>();
-		return root.lookingAt(parser, top, parser.getPos(), vs);
-	}
-
-	public Object lookingAt(GrammarParser parser) throws ParserException {
-		return lookingAt(true, parser);
+	@Override
+	protected Object lookingAt(boolean top, GrammarParser parser) throws ParserException {
+		return root.lookingAt(parser, top, parser.getPos(), new LinkedList<>());
 	}
 
 }
