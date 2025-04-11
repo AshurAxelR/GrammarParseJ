@@ -54,7 +54,11 @@ public abstract class GrammarParser {
 	
 	protected abstract boolean lookingAt(Object o);
 	public abstract Object tokenValue();
-	
+
+	public String tokenName() {
+		return String.format("token: %s", tokenValue());
+	}
+
 	protected ParserException lastError = null;
 	
 	private Object matchOptional(OptionalPattern opt) throws ParserException {
@@ -137,7 +141,15 @@ public abstract class GrammarParser {
 	protected Object parseInput() throws ParserException {
 		next();
 		lastError = null;
-		return topRule.lookingAt(true, this);
+		try {
+			return topRule.lookingAt(true, this);
+		}
+		catch (ParserException ex) {
+			if(lastError!=null && lastError.pos>ex.pos)
+				throw lastError;
+			else
+				throw ex;
+		}
 	}
 
 	public static Object optValue(Object optv, int index, Object def) {

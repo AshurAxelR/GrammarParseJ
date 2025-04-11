@@ -35,4 +35,20 @@ public abstract class TokenisedGrammarParser<T> extends GrammarParser {
 		}
 	}
 
+	public abstract Object tokenValue(T token);
+	
+	public String tokenName(T token) {
+		return String.format("token: %s", tokenValue(token));
+	}
+
+	@Override
+	public final Object tokenValue() {
+		return tokenValue(token);
+	}
+	
+	@Override
+	public final String tokenName() {
+		return tokenName(token);
+	}
+
 }

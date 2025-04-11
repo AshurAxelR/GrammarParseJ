@@ -56,7 +56,7 @@ public class GrammarRule<V> extends ParserRule {
 			RuleMatchingException lastErr = null;
 			if(next.isEmpty()) {
 				if(top && !parser.isEnd()) {
-					if(parser.lastError!=null)
+					if(parser.lastError!=null && parser.lastError.pos>=parser.getPos())
 						throw parser.lastError;
 					else
 						throw new ParserException(parser.getPos(), "expected end of file");

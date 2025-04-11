@@ -75,7 +75,7 @@ public class ExpressionParser extends TokenisedGrammarParser<Object> {
 	}
 	
 	@Override
-	public Object tokenValue() {
+	public Object tokenValue(Object token) {
 		return token;
 	}
 	

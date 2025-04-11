@@ -10,22 +10,26 @@ import java.util.regex.Pattern;
 import com.xrbpowered.parser.err.ParserException;
 import com.xrbpowered.parser.err.TokenProviderException;
 import com.xrbpowered.parser.grammar.TokenisedGrammarParser;
+import com.xrbpowered.parser.token.LineColProvider.LineColPos;
+import com.xrbpowered.parser.token.LineColProvider;
 import com.xrbpowered.parser.token.TokeniserBuilder;
 
 public class JsonParser extends TokenisedGrammarParser<JsonParser.Token> {
 
+	public static int tabSize = 4;
+	
 	private enum Type {
 		SYMBOL, STRING, LITERAL
 	}
 	
-	static record Token(Type type, Object value) {}
+	protected static record Token(Type type, Object value) {}
 
 	public static Token fromKeyword(String s) {
 		return new Token(Type.LITERAL, switch(s) {
 			case "true" -> true;
 			case "false" -> false;
 			case "null" -> null;
-			default -> throw new TokenProviderException("unknown keyword");
+			default -> throw new TokenProviderException("unknown keyword "+s);
 		});
 	}
 
@@ -80,8 +84,17 @@ public class JsonParser extends TokenisedGrammarParser<JsonParser.Token> {
 	}
 
 	@Override
-	public Object tokenValue() {
+	public Object tokenValue(Token token) {
 		return token.value;
+	}
+	
+	@Override
+	public String tokenName(Token token) {
+		return switch(token.type) {
+			case SYMBOL -> String.format("symbol '%s'", token.value);
+			case STRING ->  "string";
+			case LITERAL -> String.format("literal: %s", token.value);
+		};
 	}
 	
 	protected Object parseInput() {
@@ -89,8 +102,8 @@ public class JsonParser extends TokenisedGrammarParser<JsonParser.Token> {
 			return super.parseInput();
 		}
 		catch (ParserException ex) {
-			// TODO print line:col
-			System.err.println(ex.getMessage());
+			LineColPos lc = new LineColProvider(tokeniser.getSource()).find(ex.pos);
+			System.err.printf("(%d:%d) %s\n", lc.line()+1, lc.col()+1, ex.getMessage());
 			return null;
 		}
 	}

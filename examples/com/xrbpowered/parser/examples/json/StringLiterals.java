@@ -20,7 +20,7 @@ public class StringLiterals {
 				case 'n' -> "\n";
 				case 'r' -> "\r";
 				case 't' -> "\t";
-				default -> throw new TokenProviderException("bad escape sequence \\"+s);
+				default -> throw new TokenProviderException("bad escape sequence "+s);
 			})
 			.rule(".", (s) -> s)
 			.build();
