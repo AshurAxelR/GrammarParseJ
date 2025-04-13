@@ -4,7 +4,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.List;
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Map;
 
 public class JsonPrinter {
@@ -28,52 +31,68 @@ public class JsonPrinter {
 		}
 	}
 	
-	private void print(PrintStream out, String indent, Object o) {
-		if(o==null)
-			out.print("null");
-		else if(o instanceof Map<?, ?> map) {
-			out.print("{");
-			if(!map.isEmpty()) {
-				String nextIndent = indent + this.indent;
-				newline(out, nextIndent);
-				boolean first = true;
-				for(Map.Entry<?, ?> e : map.entrySet()) {
-					Object key = e.getKey();
-					if(key instanceof String s) {
-						if(!first) {
-							out.print(",");
-							newline(out, nextIndent);
-						}
-						first = false;
-						out.printf("\"%s\":", s);
-						if(pretty)
-							out.print(" ");
-						print(out, nextIndent, e.getValue());
-					}
-					else 
-						throw new UnsupportedOperationException("requires String keys");
-				}
-				newline(out, indent);
-			}
-			out.print("}");
-		}
-		else if(o instanceof List<?> list) {
-			out.print("[");
-			if(!list.isEmpty()) {
-				String nextIndent = indent + this.indent;
-				newline(out, nextIndent);
-				boolean first = true;
-				for(Object i : list) {
+	private void printMap(PrintStream out, String indent, Map<?, ?> map) {
+		out.print("{");
+		if(!map.isEmpty()) {
+			String nextIndent = indent + this.indent;
+			newline(out, nextIndent);
+			boolean first = true;
+			for(Map.Entry<?, ?> e : map.entrySet()) {
+				Object key = e.getKey();
+				if(key instanceof String s) {
 					if(!first) {
 						out.print(",");
 						newline(out, nextIndent);
 					}
 					first = false;
-					print(out, nextIndent, i);
+					out.printf("\"%s\":", s);
+					if(pretty)
+						out.print(" ");
+					print(out, nextIndent, e.getValue());
 				}
-				newline(out, indent);
+				else 
+					throw new UnsupportedOperationException("requires String keys");
 			}
-			out.print("]");
+			newline(out, indent);
+		}
+		out.print("}");
+	}
+	
+	private void printList(PrintStream out, String indent, Collection<?> list) {
+		out.print("[");
+		if(!list.isEmpty()) {
+			String nextIndent = indent + this.indent;
+			newline(out, nextIndent);
+			boolean first = true;
+			for(Object i : list) {
+				if(!first) {
+					out.print(",");
+					newline(out, nextIndent);
+				}
+				first = false;
+				print(out, nextIndent, i);
+			}
+			newline(out, indent);
+		}
+		out.print("]");
+	}
+	
+	private void print(PrintStream out, String indent, Object o) {
+		if(o==null)
+			out.print("null");
+		else if(o instanceof Map<?, ?> map)
+			printMap(out, indent, map);
+		else if(o instanceof Collection<?> col)
+			printList(out, indent, col);
+		else if(o instanceof Object[] array)
+			printList(out, indent, Arrays.asList(array));
+		else if(o.getClass().isArray()) {
+			// convert primitive array
+			int n = Array.getLength(o);
+			ArrayList<Object> list = new ArrayList<>(n);
+			for(int i=0; i<n; i++)
+				list.add(Array.get(o, i));
+			printList(out, indent, list);
 		}
 		else if(o instanceof String s)
 			out.printf("\"%s\"", StringLiterals.escape(s));
