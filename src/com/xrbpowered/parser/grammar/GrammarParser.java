@@ -22,10 +22,10 @@ public abstract class GrammarParser {
 		public int hashCode() {
 			return Objects.hash(name);
 		}
-		
+
 		@Override
 		public boolean equals(Object obj) {
-			if(this==obj)
+			if(this == obj)
 				return true;
 			if(!(obj instanceof RuleRef))
 				return false;
@@ -33,25 +33,25 @@ public abstract class GrammarParser {
 			return Objects.equals(name, other.name);
 		}
 	}
-	
+
 	public static class OptionalPattern {
 		public Object[] p;
-		
+
 		public OptionalPattern(Object[] p) {
 			this.p = p;
 		}
 	}
-	
+
 	protected Map<String, ParserRule> rules = new LinkedHashMap<>();
-	
+
 	protected ParserRule topRule = null;
 
 	public abstract int getPos();
 	public abstract boolean isEnd();
-	
+
 	protected abstract void next() throws ParserException;
 	protected abstract void restorePos(int index) throws ParserException;
-	
+
 	protected abstract boolean lookingAt(Object o);
 	public abstract Object tokenValue();
 
@@ -60,12 +60,12 @@ public abstract class GrammarParser {
 	}
 
 	protected ParserException lastError = null;
-	
+
 	private Object matchOptional(OptionalPattern opt) throws ParserException {
 		int pos = getPos();
 		try {
 			Object[] vs = new Object[opt.p.length];
-			for(int i=0; i<opt.p.length; i++)
+			for(int i = 0; i < opt.p.length; i++)
 				vs[i] = match(opt.p[i]);
 			return vs;
 		}
@@ -74,7 +74,7 @@ public abstract class GrammarParser {
 			return null;
 		}
 	}
-	
+
 	protected Object match(Object p) throws ParserException {
 		if(isEnd())
 			throw new RuleMatchingException(this, "unexpected end of file");
@@ -90,19 +90,19 @@ public abstract class GrammarParser {
 		else
 			throw new UnexpectedTokenException(this);
 	}
-	
+
 	protected void addRule(ParserRule r) {
 		if(rules.containsKey(r.name))
-			throw new InvalidParameterException(String.format("rule %s already exists", r.name));
+			throw new InvalidParameterException(String.format("rule <%s> already exists", r.name));
 		rules.put(r.name, r);
 	}
-	
+
 	protected <V> GrammarRule<V> rule(String name, Class<V> output) {
 		GrammarRule<V> r = new GrammarRule<>(name);
 		addRule(r);
 		return r;
 	}
-	
+
 	protected <V> void listRule(String name, Object item, Object sep, Class<V> itemClass) {
 		addRule(new ListRule<V>(name, false, item, sep));
 	}
@@ -113,39 +113,39 @@ public abstract class GrammarParser {
 
 	public ParserRule getRule(String name) {
 		ParserRule rule = rules.get(name);
-		if(rule==null)
-			throw new InvalidParameterException("no parser rule "+name);
+		if(rule == null)
+			throw new InvalidParameterException(String.format("no parser rule <%s>", name));
 		return rule;
 	}
-	
+
 	public void linkRules(String topRule) {
 		this.topRule = getRule(topRule);
 		for(ParserRule rule : rules.values())
 			rule.linkRules(this);
 	}
-	
+
 	public Object linkPatternRule(Object p) {
-		if(p==null)
+		if(p == null)
 			return null;
 		else if(p instanceof RuleRef ref)
 			return getRule(ref.name);
 		else if(p instanceof OptionalPattern opt) {
-			for(int i=0; i<opt.p.length; i++)
+			for(int i = 0; i < opt.p.length; i++)
 				opt.p[i] = linkPatternRule(opt.p[i]);
 			return p;
 		}
 		else
 			return p;
 	}
-	
+
 	protected Object parseInput() throws ParserException {
 		next();
 		lastError = null;
 		try {
 			return topRule.lookingAt(true, this);
 		}
-		catch (ParserException ex) {
-			if(lastError!=null && lastError.pos>ex.pos)
+		catch(ParserException ex) {
+			if(lastError != null && lastError.pos > ex.pos)
 				throw lastError;
 			else
 				throw ex;
@@ -153,22 +153,22 @@ public abstract class GrammarParser {
 	}
 
 	public static Object optValue(Object optv, int index, Object def) {
-		if(optv==null)
+		if(optv == null)
 			return def;
 		else
 			return ((Object[]) optv)[index];
 	}
-	
+
 	public static RuleRef r(String name) {
 		return new RuleRef(name);
 	}
-	
+
 	public static Object[] q(Object... objects) {
 		return objects;
 	}
-	
+
 	public static OptionalPattern opt(Object... p) {
-		if(p.length==0)
+		if(p.length == 0)
 			throw new InvalidParameterException("optional pattern must have at leasst one element");
 		return new OptionalPattern(p);
 	}

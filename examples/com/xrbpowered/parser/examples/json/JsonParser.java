@@ -97,6 +97,7 @@ public class JsonParser extends TokenisedGrammarParser<JsonParser.Token> {
 		};
 	}
 	
+	@Override
 	protected Object parseInput() {
 		try {
 			return super.parseInput();

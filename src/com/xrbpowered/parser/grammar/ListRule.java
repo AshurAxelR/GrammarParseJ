@@ -38,7 +38,8 @@ public class ListRule<V> extends ParserRule {
 				V v = (V) parser.match(item);
 				list.add(v);
 				pos = parser.getPos();
-				parser.match(sep);
+				if(sep!=null)
+					parser.match(sep);
 				next = true;
 			}
 			catch (RuleMatchingException ex) {
