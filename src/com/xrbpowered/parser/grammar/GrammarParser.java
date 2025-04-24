@@ -116,6 +116,26 @@ public abstract class GrammarParser {
 		addRule(new ListRule<V>(name, true, item, sep));
 	}
 
+	protected <V> void binaryOpRuleL(String name, Class<V> nodeClass,
+			Object arg, Object[] ops, OutputGenerator<V> gen) {
+		addRule(new BinaryOpRule<V>(name, false, arg, ops, gen));
+	}
+
+	protected <V> void binaryOpRuleR(String name, Class<V> nodeClass,
+			Object arg, Object[] ops, OutputGenerator<V> gen) {
+		addRule(new BinaryOpRule<V>(name, true, arg, ops, gen));
+	}
+
+	protected <V> void binaryOpPrecRulesL(String name, Class<V> nodeClass,
+			Object arg, Object[][] ops, OutputGenerator<V> gen) {
+		addRule(BinaryOpRule.createPrecRules(name, false, nodeClass, arg, ops, gen));
+	}
+
+	protected <V> void binaryOpPrecRulesR(String name, Class<V> nodeClass,
+			Object arg, Object[][] ops, OutputGenerator<V> gen) {
+		addRule(BinaryOpRule.createPrecRules(name, true, nodeClass, arg, ops, gen));
+	}
+
 	public ParserRule getRule(String name) {
 		ParserRule rule = rules.get(name);
 		if(rule == null)
@@ -132,6 +152,10 @@ public abstract class GrammarParser {
 	public Object linkPatternRule(Object p) {
 		if(p == null)
 			return null;
+		else if(p instanceof ParserRule rule) {
+			rule.linkRules(this);
+			return p;
+		}
 		else if(p instanceof RuleRef ref)
 			return getRule(ref.name);
 		else if(p instanceof OptionalPattern opt) {

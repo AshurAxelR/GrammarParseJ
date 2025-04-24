@@ -23,62 +23,55 @@ public class ExpressionParser extends TokenisedGrammarParser<Object> {
 				.rule("[A-Za-z][A-Za-z_0-9]*", (s) -> s)
 				.rule("[()+\\-*/=,]", (s) -> s.charAt(0))
 				.build());
-		
+
 		rule("top_expr", Assignment.class)
-			.sel(q(String.class, '=', r("expr")), (vs) -> new Assignment((String) vs[0], (Expression) vs[2]))
-			.sel(q(r("expr")), (vs) -> new Assignment(null, (Expression) vs[0]));
-		
-		rule("expr", Expression.class)
-			.sel(q(r("expr_prod"), '+', r("expr")), (vs) -> BinaryOp.add((Expression) vs[0], (Expression) vs[2]))
-			.sel(q(r("expr_prod"), '-', r("expr")), (vs) -> BinaryOp.sub((Expression) vs[0], (Expression) vs[2]))
-			.sel(q(r("expr_prod")), (vs) -> (Expression) vs[0]);
-		
-		rule("expr_prod", Expression.class)
-			.sel(q(r("expr_sign"), '*', r("expr_prod")), (vs) -> BinaryOp.mul((Expression) vs[0], (Expression) vs[2]))
-			.sel(q(r("expr_sign"), '/', r("expr_prod")), (vs) -> BinaryOp.div((Expression) vs[0], (Expression) vs[2]))
-			.sel(q(r("expr_sign")), (vs) -> (Expression) vs[0]);
-		
+				.sel(q(String.class, '=', r("expr")), (vs) -> new Assignment((String) vs[0], (Expression) vs[2]))
+				.sel(q(r("expr")), (vs) -> new Assignment(null, (Expression) vs[0]));
+
+		binaryOpPrecRulesL("expr", Expression.class, r("expr_sign"), new Object[][] {{'+', '-'}, {'*', '/'}},
+				(vs) -> BinaryOp.select((Character) vs[1], (Expression) vs[0], (Expression) vs[2]));
+
 		rule("expr_sign", Expression.class)
-			.sel(q('-', r("expr_lit")), (vs) -> UnaryOp.neg((Expression) vs[1]))
-			.sel(q('+', r("expr_lit")), (vs) -> (Expression) vs[1]) // unary plus does nothing
-			.sel(q(r("expr_lit")), (vs) -> (Expression) vs[0]);
+				.sel(q('-', r("expr_lit")), (vs) -> UnaryOp.neg((Expression) vs[1]))
+				.sel(q('+', r("expr_lit")), (vs) -> (Expression) vs[1]) // unary plus does nothing
+				.sel(q(r("expr_lit")), (vs) -> (Expression) vs[0]);
 
 		rule("expr_lit", Expression.class)
-			.sel(q('(', r("expr"), ')'), (vs) -> (Expression) vs[1])
-			.sel(q(String.class, '(', r("opt_args"), ')'), (vs) -> {
-				@SuppressWarnings("unchecked")
-				List<Expression> args = (List<Expression>) vs[2];
-				return Function.create((String) vs[0], args);
-			})
-			.sel(q(String.class), (vs) -> {
-				String name = (String) vs[0];
-				Double val = vars.get(name);
-				if(val==null)
-					throw new OutputGeneratorException("unknown variable " + name);
-				return new ConstValue(val); // reading variable value as constant
-			})
-			.sel(q(Double.class), (vs) -> new ConstValue((Double) vs[0]));
+				.sel(q('(', r("expr"), ')'), (vs) -> (Expression) vs[1])
+				.sel(q(String.class, '(', r("opt_args"), ')'), (vs) -> {
+					@SuppressWarnings("unchecked")
+					List<Expression> args = (List<Expression>) vs[2];
+					return Function.create((String) vs[0], args);
+				})
+				.sel(q(String.class), (vs) -> {
+					String name = (String) vs[0];
+					Double val = vars.get(name);
+					if(val == null)
+						throw new OutputGeneratorException("unknown variable " + name);
+					return new ConstValue(val); // reading variable value as constant
+				})
+				.sel(q(Double.class), (vs) -> new ConstValue((Double) vs[0]));
 
 		optListRule("opt_args", r("expr"), ',', Expression.class);
 
 		linkRules("top_expr");
 	}
-	
+
 	@Override
 	protected boolean lookingAt(Object o) {
 		if(o instanceof Class<?> cls)
 			return cls.isInstance(token);
 		else if(o instanceof Character ch)
-			return (token instanceof Character tch) && ch.charValue()==tch.charValue();
+			return (token instanceof Character tch) && ch.charValue() == tch.charValue();
 		else
 			return false;
 	}
-	
+
 	@Override
 	public Object tokenValue(Object token) {
 		return token;
 	}
-	
+
 	public Assignment parse(String input) {
 		try {
 			tokeniser.start(input);
