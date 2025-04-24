@@ -8,10 +8,12 @@ import com.xrbpowered.parser.examples.calc.ast.Assignment;
 
 public class ExpressionCalcExample {
 
+	private static boolean printAST = true;
+
 	public static void main(String[] args) {
 		Map<String, Double> vars = new HashMap<>();
 		ExpressionParser parser = new ExpressionParser(vars);
-		
+
 		try(Scanner scan = new Scanner(System.in)) {
 			for(;;) {
 				System.out.print("calc: ");
@@ -22,8 +24,11 @@ public class ExpressionCalcExample {
 				}
 
 				Assignment out = parser.parse(input);
-				if(out != null)
+				if(out != null) {
+					if(printAST)
+						out.printAST(System.out);
 					out.exec(vars, System.out);
+				}
 			}
 		}
 	}

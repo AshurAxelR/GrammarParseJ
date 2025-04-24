@@ -19,8 +19,8 @@ public class Tokeniser<T> {
 
 	protected String source = null;
 	protected int end = 0;
-	protected int index = 0;
-	protected int tokenIndex = 0;
+	protected int pos = 0;
+	protected int tokenPos = 0;
 	
 	public Tokeniser(Collection<TokeniserRule<T>> rules) {
 		this.rules = List.copyOf(rules);
@@ -34,7 +34,7 @@ public class Tokeniser<T> {
 	
 	public void start(String source, int start, int end) {
 		this.source = source;
-		this.index = start;
+		this.pos = start;
 		this.end = end;
 		for(TokeniserRule<T> rule : rules)
 			rule.setSource(source);
@@ -56,24 +56,24 @@ public class Tokeniser<T> {
 		return end;
 	}
 
-	public int getIndex() {
-		return index;
+	public int getPos() {
+		return pos;
 	}
 
-	public int getTokenIndex() {
-		return tokenIndex;
+	public int getTokenPos() {
+		return tokenPos;
 	}
 	
-	public void jumpTo(int index) {
-		this.index = index;
+	public void jumpTo(int pos) {
+		this.pos = pos;
 	}
 	
 	public T getNextToken(boolean skipVoid) throws TokeniserException {
-		while(index<end) {
+		while(pos<end) {
 			TokeniserRule<T> match = null;
 			for(TokeniserRule<T> rule : rules) {
 				Matcher m = rule.getMatcher();
-				m.region(index, end);
+				m.region(pos, end);
 				if(m.lookingAt()) {
 					match = rule;
 					break;
@@ -81,7 +81,7 @@ public class Tokeniser<T> {
 			}
 			
 			if(match!=null) {
-				tokenIndex = index;
+				tokenPos = pos;
 				try {
 					T t = match.getToken();
 					jumpTo(match.getMatcher().end());
@@ -89,16 +89,16 @@ public class Tokeniser<T> {
 						return t;
 				}
 				catch(NumberFormatException ex) {
-					throw(new TokeniserException(index, "bad number format", ex));
+					throw(new TokeniserException(pos, "bad number format", ex));
 				}
 				catch(TokenProviderException ex) {
-					throw(new TokeniserException(index, ex.getMessage(), ex));
+					throw(new TokeniserException(pos, ex.getMessage(), ex));
 				}
 			}
 			else
-				throw(new UnknownTokenException(index, source.charAt(index)));
+				throw(new UnknownTokenException(pos, source.charAt(pos)));
 		}
-		tokenIndex = end;
+		tokenPos = end;
 		return null;
 	}
 	

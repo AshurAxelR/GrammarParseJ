@@ -76,9 +76,7 @@ public class GrammarRule<V> extends ParserRule {
 						// didn't match, roll back
 						if(lastErr == null || ex.pos > lastErr.pos)
 							lastErr = ex;
-						if(parser.lastError == null || ex.pos > parser.lastError.pos)
-							parser.lastError = ex;
-						parser.restorePos(pos);
+						parser.rollBack(pos, ex);
 						while(vs.size() > vsLen)
 							vs.removeLast();
 					}

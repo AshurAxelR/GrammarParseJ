@@ -12,7 +12,7 @@ public class ListRule<V> extends ParserRule {
 	private Object item;
 	private Object sep;
 	private boolean opt;
-	
+
 	public ListRule(String name, boolean opt, Object item, Object sep) {
 		super(name);
 		this.item = item;
@@ -30,7 +30,7 @@ public class ListRule<V> extends ParserRule {
 	protected List<V> lookingAt(boolean top, GrammarParser parser) throws ParserException {
 		List<V> list = new ArrayList<>();
 		int pos = parser.getPos();
-		
+
 		boolean next = true;
 		while(next) {
 			try {
@@ -38,21 +38,19 @@ public class ListRule<V> extends ParserRule {
 				V v = (V) parser.match(item);
 				list.add(v);
 				pos = parser.getPos();
-				if(sep!=null)
+				if(sep != null)
 					parser.match(sep);
 				next = true;
 			}
-			catch (RuleMatchingException ex) {
+			catch(RuleMatchingException ex) {
 				// didn't match, roll back
-				if(parser.lastError==null || ex.pos>parser.lastError.pos)
-					parser.lastError = ex;
-				parser.restorePos(pos);
+				parser.rollBack(pos, ex);
 				next = false;
 			}
 		}
-		
+
 		if(list.isEmpty() && !opt)
-			throw new UnexpectedTokenException(parser); 
+			throw new UnexpectedTokenException(parser);
 		else
 			return list;
 	}

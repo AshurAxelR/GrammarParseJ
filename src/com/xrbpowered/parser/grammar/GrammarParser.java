@@ -45,12 +45,13 @@ public abstract class GrammarParser {
 	protected Map<String, ParserRule> rules = new LinkedHashMap<>();
 
 	protected ParserRule topRule = null;
+	protected ParserException lastError = null;
 
 	public abstract int getPos();
 	public abstract boolean isEnd();
 
 	protected abstract void next() throws ParserException;
-	protected abstract void restorePos(int index) throws ParserException;
+	protected abstract void restorePos(int pos) throws ParserException;
 
 	protected abstract boolean lookingAt(Object o);
 	public abstract Object tokenValue();
@@ -59,7 +60,11 @@ public abstract class GrammarParser {
 		return String.format("token: %s", tokenValue());
 	}
 
-	protected ParserException lastError = null;
+	protected void rollBack(int pos, RuleMatchingException ex) throws ParserException {
+		if(lastError == null || ex.pos > lastError.pos)
+			lastError = ex;
+		restorePos(pos);
+	}
 
 	private Object matchOptional(OptionalPattern opt) throws ParserException {
 		int pos = getPos();

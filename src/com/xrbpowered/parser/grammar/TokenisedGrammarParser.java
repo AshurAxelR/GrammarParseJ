@@ -14,7 +14,7 @@ public abstract class TokenisedGrammarParser<T> extends GrammarParser {
 	
 	@Override
 	public int getPos() {
-		return tokeniser.getTokenIndex();
+		return tokeniser.getTokenPos();
 	}
 	
 	@Override
@@ -28,9 +28,9 @@ public abstract class TokenisedGrammarParser<T> extends GrammarParser {
 	}
 	
 	@Override
-	protected void restorePos(int index) throws ParserException {
-		if(index!=tokeniser.getTokenIndex()) {
-			tokeniser.jumpTo(index);
+	protected void restorePos(int pos) throws ParserException {
+		if(pos!=tokeniser.getTokenPos()) {
+			tokeniser.jumpTo(pos);
 			next();
 		}
 	}
