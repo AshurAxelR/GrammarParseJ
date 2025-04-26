@@ -135,10 +135,8 @@ public abstract class GrammarParser {
 			throw new RuleMatchingException(this, "unexpected end of file");
 		else if(p instanceof ParserRule rule)
 			return rule.lookingAt(false, this);
-		else if(p instanceof OptionalPattern opt)
-			return opt.match(this);
-		else if(p instanceof AnyPattern any)
-			return any.match(this);
+		else if(p instanceof MultiPattern mp)
+			return mp.match(this);
 		else if(lookingAt(p)) {
 			Object v = tokenValue();
 			next();
