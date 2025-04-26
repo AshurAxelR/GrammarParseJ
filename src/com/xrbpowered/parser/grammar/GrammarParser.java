@@ -1,6 +1,7 @@
 package com.xrbpowered.parser.grammar;
 
 import java.security.InvalidParameterException;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -27,18 +28,81 @@ public abstract class GrammarParser {
 		public boolean equals(Object obj) {
 			if(this == obj)
 				return true;
-			if(!(obj instanceof RuleRef))
+			if(getClass() != obj.getClass())
 				return false;
 			RuleRef other = (RuleRef) obj;
 			return Objects.equals(name, other.name);
 		}
 	}
 
-	public static class OptionalPattern {
+	public abstract static class MultiPattern {
 		public Object[] p;
 
-		public OptionalPattern(Object[] p) {
+		public MultiPattern(Object[] p) {
+			if(p.length < 1)
+				throw new IllegalArgumentException("pattern must have at least one element");
 			this.p = p;
+		}
+
+		public abstract Object match(GrammarParser parser) throws ParserException;
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + Arrays.deepHashCode(p);
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if(this == obj)
+				return true;
+			if(getClass() != obj.getClass())
+				return false;
+			MultiPattern other = (MultiPattern) obj;
+			return Arrays.deepEquals(p, other.p);
+		}
+	}
+
+	public static class OptionalPattern extends MultiPattern {
+		public OptionalPattern(Object[] p) {
+			super(p);
+		}
+
+		@Override
+		public Object match(GrammarParser parser) throws ParserException {
+			int pos = parser.getPos();
+			try {
+				Object[] vs = new Object[p.length];
+				for(int i = 0; i < p.length; i++)
+					vs[i] = parser.match(p[i]);
+				return vs;
+			}
+			catch(RuleMatchingException ex) {
+				parser.restorePos(pos);
+				return null;
+			}
+		}
+	}
+
+	public static class AnyPattern extends MultiPattern {
+		public AnyPattern(Object[] p) {
+			super(p);
+		}
+
+		@Override
+		public Object match(GrammarParser parser) throws ParserException {
+			int pos = parser.getPos();
+			for(Object p : this.p) {
+				try {
+					return parser.match(p);
+				}
+				catch(RuleMatchingException ex) {
+					parser.restorePos(pos);
+				}
+			}
+			throw new UnexpectedTokenException(parser);
 		}
 	}
 
@@ -66,27 +130,15 @@ public abstract class GrammarParser {
 		restorePos(pos);
 	}
 
-	private Object matchOptional(OptionalPattern opt) throws ParserException {
-		int pos = getPos();
-		try {
-			Object[] vs = new Object[opt.p.length];
-			for(int i = 0; i < opt.p.length; i++)
-				vs[i] = match(opt.p[i]);
-			return vs;
-		}
-		catch(RuleMatchingException ex) {
-			restorePos(pos);
-			return null;
-		}
-	}
-
 	protected Object match(Object p) throws ParserException {
 		if(isEnd())
 			throw new RuleMatchingException(this, "unexpected end of file");
 		else if(p instanceof ParserRule rule)
 			return rule.lookingAt(false, this);
 		else if(p instanceof OptionalPattern opt)
-			return matchOptional(opt);
+			return opt.match(this);
+		else if(p instanceof AnyPattern any)
+			return any.match(this);
 		else if(lookingAt(p)) {
 			Object v = tokenValue();
 			next();
@@ -158,9 +210,9 @@ public abstract class GrammarParser {
 		}
 		else if(p instanceof RuleRef ref)
 			return getRule(ref.name);
-		else if(p instanceof OptionalPattern opt) {
-			for(int i = 0; i < opt.p.length; i++)
-				opt.p[i] = linkPatternRule(opt.p[i]);
+		else if(p instanceof MultiPattern mp) {
+			for(int i = 0; i < mp.p.length; i++)
+				mp.p[i] = linkPatternRule(mp.p[i]);
 			return p;
 		}
 		else
@@ -197,9 +249,11 @@ public abstract class GrammarParser {
 	}
 
 	public static OptionalPattern opt(Object... p) {
-		if(p.length == 0)
-			throw new InvalidParameterException("optional pattern must have at leasst one element");
 		return new OptionalPattern(p);
+	}
+
+	public static AnyPattern any(Object... p) {
+		return new AnyPattern(p);
 	}
 
 }
